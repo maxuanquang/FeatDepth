@@ -19,7 +19,7 @@ from mono.tools.kitti_evaluation_toolkit import kittiOdomEval
 
 def odo(opt):
     if opt.kitti:
-        filenames = readlines("../mono/datasets/splits/odom/test_files_{:02d}.txt".format(opt.sequence_id))
+        filenames = readlines("/content/FeatDepth/mono/datasets/splits/odom/test_files_{:02d}.txt".format(opt.sequence_id))
 
         dataset = KITTIOdomDataset(opt.data_path,
                                    filenames,
@@ -89,10 +89,10 @@ def odo(opt):
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='Train a detector')
-    parser.add_argument('--model_path', default='/media/sconly/24eda5d5-e79b-423b-8dcc-8339a15f3219/weight/fm_depth_odom.pth', help='model save path')
-    parser.add_argument('--data_path', default='/media/sconly/24eda5d5-e79b-423b-8dcc-8339a15f3219/data/kitti/Odometry', help='kitti odometry dataset path')
-    parser.add_argument('--gt_dir', default='../mono/datasets/gt_pose',help='kitti odometry gt path')
-    parser.add_argument('--result_dir', default='/media/sconly/24eda5d5-e79b-423b-8dcc-8339a15f3219/odom/')
+    parser.add_argument('--model_path', default='/content/logs/epoch_1.pth', help='model save path')
+    parser.add_argument('--data_path', default='/content/drive/MyDrive/Dự án/KITTI Dataset/Odometry/dataset', help='kitti odometry dataset path')
+    parser.add_argument('--gt_dir', default='/content/FeatDepth/mono/datasets/gt_pose',help='kitti odometry gt path')
+    parser.add_argument('--result_dir', default='/content/results_odom/')
     parser.add_argument('--height', default=192)
     parser.add_argument('--width', default=640)
     parser.add_argument('--kitti', default=True, help='whether test on the kitti odometry dataset')

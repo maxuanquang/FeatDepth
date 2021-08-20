@@ -20,7 +20,7 @@ cv2.setNumThreads(0)  # This speeds up evaluation 5x on our unix systems (OpenCV
 
 
 def evaluate(cfg_path,model_path,gt_path, output_path):
-    filenames = readlines("../mono/datasets/splits/exp/val_files.txt")
+    filenames = readlines("/content/FeatDepth/mono/datasets/splits/eigen_full/val_files.txt")
     cfg = Config.fromfile(cfg_path)
 
     dataset = KITTIRAWDataset(cfg.data['in_path'],
@@ -29,7 +29,8 @@ def evaluate(cfg_path,model_path,gt_path, output_path):
                               cfg.data['width'],
                               [0],
                               is_train=False,
-                              gt_depth_path=gt_path)
+                              gt_depth_path=gt_path,
+                              img_ext='.png')
 
     dataloader = DataLoader(dataset,
                             1,
@@ -67,10 +68,10 @@ def evaluate(cfg_path,model_path,gt_path, output_path):
 
 
 if __name__ == "__main__":
-    cfg_path = '../config/cfg_kitti_fm.py'# path to cfg file
-    model_path = '/media/user/harddisk/weight/fm_depth.pth'# path to model weight
-    gt_path = '/media/user/harddisk/data/kitti/kitti_raw/rawdata/gt_depths.npz' # path to kitti gt depth
-    output_path = '/media/user/harddisk/results' # dir for saving depth maps
+    cfg_path = '/content/FeatDepth/config/cfg_kitti_fm.py'# path to cfg file
+    model_path = '/content/logs/epoch_1.pth'# path to model weight
+    gt_path = '/content/drive/MyDrive/VinAI/Motion segmentation/eigen_test_results/SSIM_0.36_L1_0.63_Smooth_0.01_full/predictions.npy' # path to kitti gt depth
+    output_path = '/content/results' # dir for saving depth maps
     if not os.path.exists(output_path):
         os.mkdir(output_path)
     evaluate(cfg_path,model_path,gt_path,output_path)

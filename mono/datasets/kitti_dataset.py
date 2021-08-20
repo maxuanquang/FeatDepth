@@ -101,7 +101,6 @@ class KITTIRAWDataset(KITTIDataset):
 
         return odo_pose
 
-
 class KITTIOdomDataset(KITTIDataset):
     """KITTI dataset for odometry training and testing
     """

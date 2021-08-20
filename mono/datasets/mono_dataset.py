@@ -69,9 +69,7 @@ class MonoDataset(data.Dataset):
         self.flag = np.zeros(self.__len__(), dtype=np.int64)
 
         if not is_train and self.gt_depth_path is not None:
-            self.gt_depths = np.load(gt_depth_path,
-                                     allow_pickle=True,
-                                     fix_imports=True, encoding='latin1')["data"]
+            self.gt_depths = np.load(gt_depth_path, allow_pickle=True)
 
     def preprocess(self, inputs, color_aug):
         """Resize colour images to the required scales and augment if required
@@ -126,6 +124,9 @@ class MonoDataset(data.Dataset):
 
         do_color_aug = self.is_train and random.random() > 0.5
         do_flip = self.is_train and random.random() > 0.5
+
+        do_color_aug = False
+        do_flip = False
 
         line = self.filenames[index].split()
         if not self.is_train and self.gt_depth_path is not None:

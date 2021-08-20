@@ -17,7 +17,8 @@ from mono.model.mono_fm.pose_decoder import PoseDecoder
 
 
 def evaluate(data_path,model_path,sequence_id,height,width):
-    filenames = readlines("../mono/datasets/splits/odom/test_files_{:02d}.txt".format(sequence_id))
+    # filenames = readlines("/content/FeatDepth/mono/datasets/splits/odom/test_files_09.txt")
+    filenames = readlines("/content/FeatDepth/mono/datasets/splits/odom/test_files_{:02d}.txt".format(sequence_id))
 
     dataset = KITTIOdomDataset(data_path,
                                filenames,
@@ -87,11 +88,11 @@ def evaluate(data_path,model_path,sequence_id,height,width):
 
 
 if __name__ == "__main__":
-    data_path='/media/user/harddisk/data/kitti/Odometry/dataset'#path to kitti odometry
-    model_path = '/media/user/harddisk/weight/fm_depth.pth'
+    data_path='/content/drive/MyDrive/Dự án/KITTI Dataset/Odometry/dataset'#path to kitti odometry
+    model_path = '/content/logs/epoch_1.pth'
     height=320
     width=1024
-    sequence_id =9
+    sequence_id = 9
     evaluate(data_path,model_path,sequence_id,height,width)
     sequence_id = 10
     evaluate(data_path,model_path,sequence_id,height,width)

@@ -7,13 +7,14 @@ WIDTH = 1024#input image width
 
 data = dict(
     name = 'kitti',#dataset name
-    split = 'exp',#training split name
+    split = 'eigen_full',#training split name
     height = HEIGHT,
     width = WIDTH,
     frame_ids = FRAME_IDS,
-    in_path = '/media/sconly/harddisk/data/kitti/kitti_raw/rawdata',#path to raw data
-    gt_depth_path = '/media/sconly/harddisk/data/kitti/kitti_raw/rawdata/gt_depths.npz',#path to gt data
-    png = False,#image format
+    in_path = '/content/drive/MyDrive/Dự án/KITTI Dataset/Raw Data',#path to raw data
+    # gt_depth_path = '/media/sconly/harddisk/data/kitti/kitti_raw/rawdata/gt_depths.npz',#path to gt data
+    gt_depth_path = '/content/drive/MyDrive/VinAI/Motion segmentation/eigen_test_results/SSIM_0.36_L1_0.63_Smooth_0.01_full/predictions.npy',
+    png = True,#image format
     stereo_scale = True if 's' in FRAME_IDS else False,
 )
 
@@ -28,9 +29,9 @@ model = dict(
     scales = [0, 1, 2, 3],# output different scales of depth maps
     min_depth = 0.1, # minimum of predicted depth value
     max_depth = 100.0, # maximum of predicted depth value
-    depth_pretrained_path = '/media/sconly/harddisk/weight/resnet/resnet{}.pth'.format(DEPTH_LAYERS),# pretrained weights for resnet
-    pose_pretrained_path =  '/media/sconly/harddisk/weight/resnet/resnet{}.pth'.format(POSE_LAYERS),# pretrained weights for resnet
-    extractor_pretrained_path = '/media/sconly/harddisk/weight/autoencoder.pth',# pretrained weights for autoencoder
+    depth_pretrained_path = None,# pretrained weights for resnet
+    pose_pretrained_path =  None,# pretrained weights for resnet
+    extractor_pretrained_path = None,# pretrained weights for autoencoder
     automask = False if 's' in FRAME_IDS else True,
     disp_norm = False if 's' in FRAME_IDS else True,
     perception_weight = 1e-3,
