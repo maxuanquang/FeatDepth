@@ -53,7 +53,7 @@ def evaluate(MODEL_PATH, CFG_PATH, GT_PATH):
             for key, ipt in inputs.items():
                 inputs[key] = ipt.cuda()
             tgt_img = inputs[('color', 0, 0)].cpu().detach().numpy()
-            tgt_img = np.transpose(tgt_img, (1, 2, 0))
+            tgt_img = np.transpose(tgt_img[0], (1, 2, 0))
             tgt_imgs.append(inputs[('color', 0, 0)])
             outputs = model(inputs)
 
