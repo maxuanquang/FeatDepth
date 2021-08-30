@@ -11,9 +11,10 @@ data = dict(
     height = HEIGHT,
     width = WIDTH,
     frame_ids = FRAME_IDS,
-    in_path = '/content/drive/MyDrive/Dự án/KITTI Dataset/Raw Data',#path to raw data
+    # in_path = '/content/drive/MyDrive/Dự án/KITTI Dataset/Raw Data',#path to raw data
+    in_path = '/content/eigen_test_split',#path to raw data
     # gt_depth_path = '/media/sconly/harddisk/data/kitti/kitti_raw/rawdata/gt_depths.npz',#path to gt data
-    gt_depth_path = '/content/drive/MyDrive/VinAI/Motion segmentation/eigen_test_results/SSIM_0.36_L1_0.63_Smooth_0.01_full/predictions.npy',
+    gt_depth_path = '/content/logs/gt.npy',
     png = True,#image format
     stereo_scale = True if 's' in FRAME_IDS else False,
 )
