@@ -142,6 +142,6 @@ def evaluate(MODEL_PATH, CFG_PATH, GT_PATH):
 
 if __name__ == "__main__":
     CFG_PATH = '/content/FeatDepth/config/cfg_kitti_fm.py'#path to cfg file
-    GT_PATH = '/content/FeatDepth-gt/gt.npy'#path to kitti gt depth
+    GT_PATH = '/content/logs/gt.npy'#path to kitti gt depth
     MODEL_PATH = '/content/logs/epoch_1.pth'#path to model weights
     evaluate(MODEL_PATH, CFG_PATH, GT_PATH)
