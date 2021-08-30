@@ -3,6 +3,7 @@ import cv2
 import sys
 import numpy as np
 from mmcv import Config
+import os
 
 import torch
 from torch.utils.data import DataLoader
@@ -52,9 +53,11 @@ def evaluate(MODEL_PATH, CFG_PATH, GT_PATH):
         for batch_idx, inputs in enumerate(dataloader):
             for key, ipt in inputs.items():
                 inputs[key] = ipt.cuda()
+
             tgt_img = inputs[('color', 0, 0)].cpu().detach().numpy()
             tgt_img = np.transpose(tgt_img[0], (1, 2, 0))
-            tgt_imgs.append(inputs[('color', 0, 0)])
+            tgt_imgs.append(tgt_img)
+
             outputs = model(inputs)
 
             disp = outputs[("disp", 0, 0)]
@@ -62,6 +65,7 @@ def evaluate(MODEL_PATH, CFG_PATH, GT_PATH):
             pred_disp, _ = disp_to_depth(disp, 0.1, 100)
             pred_disp = pred_disp.cpu()[:, 0].numpy()
             pred_disps.append(pred_disp)
+
     pred_disps = np.concatenate(pred_disps)
 
     gt_depths = np.load(GT_PATH, allow_pickle=True)
@@ -108,13 +112,16 @@ def evaluate(MODEL_PATH, CFG_PATH, GT_PATH):
 
     ratios = np.array(ratios)
     med = np.median(ratios)
-    mean_errors = np.array(errors).mean(0)
+    errors = np.array(errors)
+    mean_errors = errors.mean(0)
     print("Scaling ratios | med: {:0.3f} | std: {:0.3f}".format(med, np.std(ratios / med)))
     print("\n" + ("{:>}| " * 7).format("abs_rel", "sq_rel", "rmse", "rmse_log", "a1", "a2", "a3"))
     print(("&{:.3f} " * 7).format(*mean_errors.tolist()) + "\\\\")
     
     print("\n-> Saving results!")
     output_dir = '/content/FeatDepth/results/'
+    if not os.path.exists(output_dir):
+        os.makedirs(output_dir)
     np.save(output_dir + 'predictions.npy', predictions)
     np.save(output_dir + 'errors.npy', errors)
 
@@ -132,6 +139,9 @@ def evaluate(MODEL_PATH, CFG_PATH, GT_PATH):
     np.save(output_dir + 'best_predictions.npy', best_predictions)
     np.save(output_dir + 'worst_predictions.npy', worst_predictions)
 
+
+    tgt_imgs = np.asarray(tgt_imgs)
+    tgt_imgs = tgt_imgs * 255.
     tgt_imgs = np.asarray(tgt_imgs, dtype=np.int)
     best_imgs = tgt_imgs[best_indices]
     worst_imgs = tgt_imgs[worst_indices]
