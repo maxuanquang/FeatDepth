@@ -1,151 +1,157 @@
 from __future__ import absolute_import, division, print_function
-
-import os
-import scipy.misc
+import cv2
+import sys
 import numpy as np
-import PIL.Image as pil
-import datetime
+from mmcv import Config
+import os
 
-from .kitti_utils import generate_depth_map, read_calib_file, transform_from_rot_trans, pose_from_oxts_packet
-from .mono_dataset import MonoDataset
+import torch
+from torch.utils.data import DataLoader
 
+sys.path.append('.')
+from mono.model.registry import MONO
+from mono.model.mono_baseline.layers import disp_to_depth
+from mono.datasets.utils import readlines, compute_errors
+from mono.datasets.kitti_dataset import KITTIRAWDataset
 
-class KITTIDataset(MonoDataset):
-    """Superclass for different types of KITTI dataset loaders
-    """
-    def __init__(self, *args, **kwargs):
-        super(KITTIDataset, self).__init__(*args, **kwargs)
-
-        self.K = np.array([[0.58, 0, 0.5, 0],
-                           [0, 1.92, 0.5, 0],
-                           [0, 0, 1, 0],
-                           [0, 0, 0, 1]], dtype=np.float32)
-
-        self.full_res_shape = (1242, 375)
-        self.side_map = {"2": 2, "3": 3, "l": 2, "r": 3}
-
-    def check_depth(self):
-        line = self.filenames[0].split()
-        scene_name = line[0]
-        frame_index = int(line[1])
-
-        velo_filename = os.path.join(
-            self.data_path,
-            scene_name,
-            "velodyne_points/data/{:010d}.bin".format(int(frame_index)))
-
-        return os.path.isfile(velo_filename)
-
-    def get_color(self, folder, frame_index, side, do_flip):
-        color = self.loader(self.get_image_path(folder, frame_index, side))
-
-        if do_flip:
-            color = color.transpose(pil.FLIP_LEFT_RIGHT)
-
-        return color
+cv2.setNumThreads(0)  # This speeds up evaluation 5x on our unix systems (OpenCV 3.3.1)
+STEREO_SCALE_FACTOR = 36
+MIN_DEPTH=1e-3
+MAX_DEPTH=80
 
 
-class KITTIRAWDataset(KITTIDataset):
-    """KITTI dataset which loads the original velodyne depth maps for ground truth
-    """
-    def __init__(self, *args, **kwargs):
-        super(KITTIRAWDataset, self).__init__(*args, **kwargs)
+def evaluate(MODEL_PATH, CFG_PATH, GT_PATH):
+    filenames = readlines("/content/FeatDepth/mono/datasets/splits/exp/val_files.txt")
+    cfg = Config.fromfile(CFG_PATH)
 
-    def get_image_path(self, folder, frame_index, side):
-        f_str = "{:010d}{}".format(frame_index, self.img_ext)
-        image_path = os.path.join(
-            self.data_path, folder, "image_0{}/data".format(self.side_map[side]), f_str)
-        return image_path
+    dataset = KITTIRAWDataset(cfg.data['in_path'],
+                              filenames,
+                              cfg.data['height'],
+                              cfg.data['width'],
+                              [0],
+                              is_train=False,
+                              gt_depth_path=GT_PATH,
+                              img_ext='.png')
 
-    def get_depth(self, folder, frame_index, side, do_flip):
-        calib_path = os.path.join(self.data_path, folder.split("/")[0])
+    dataloader = DataLoader(dataset,
+                            1,
+                            shuffle=False,
+                            num_workers=4,
+                            pin_memory=True,
+                            drop_last=False)
 
-        velo_filename = os.path.join(
-            self.data_path,
-            folder,
-            "velodyne_points/data/{:010d}.bin".format(int(frame_index)))
+    cfg.model['imgs_per_gpu'] = 1
+    model = MONO.module_dict[cfg.model['name']](cfg.model)
+    checkpoint = torch.load(MODEL_PATH)
+    model.load_state_dict(checkpoint['state_dict'], strict=True)
+    model.cuda()
+    model.eval()
 
-        depth_gt = generate_depth_map(calib_path, velo_filename, self.side_map[side])
-        depth_gt = scipy.misc.imresize(depth_gt, self.full_res_shape[::-1], "nearest")
+    pred_disps = []
+    tgt_imgs = []
+    with torch.no_grad():
+        for batch_idx, inputs in enumerate(dataloader):
+            for key, ipt in inputs.items():
+                inputs[key] = ipt.cuda()
 
-        if do_flip:
-            depth_gt = np.fliplr(depth_gt)
+            tgt_img = inputs[('color', 0, 0)].cpu().detach().numpy()
+            tgt_img = np.transpose(tgt_img[0], (1, 2, 0))
+            tgt_imgs.append(tgt_img)
 
-        return depth_gt
+            outputs = model(inputs)
 
-    def get_pose(self, folder, frame_index, offset):
-        oxts_root = os.path.join(self.data_path, folder, 'oxts')
-        with open(os.path.join(oxts_root, 'timestamps.txt')) as f:
-            timestamps = np.array([datetime.datetime.strptime(ts[:-3], "%Y-%m-%d %H:%M:%S.%f").timestamp()
-                                   for ts in f.read().splitlines()])
+            disp = outputs[("disp", 0, 0)]
 
-        speed0 = np.genfromtxt(os.path.join(oxts_root, 'data', '{:010d}.txt'.format(frame_index)))[[8, 9, 10]]
-        # speed1 = np.genfromtxt(os.path.join(oxts_root, 'data', '{:010d}.txt'.format(frame_index+offset)))[[8, 9, 10]]
+            pred_disp, _ = disp_to_depth(disp, 0.1, 100)
+            pred_disp = pred_disp.cpu()[:, 0].numpy()
+            pred_disps.append(pred_disp)
 
-        timestamp0 = timestamps[frame_index]
-        timestamp1 = timestamps[frame_index+offset]
-        # displacement = 0.5 * (speed0 + speed1) * (timestamp1 - timestamp0)
-        displacement = speed0 * (timestamp1 - timestamp0)
+    pred_disps = np.concatenate(pred_disps)
 
-        imu2velo = read_calib_file(os.path.join(self.data_path, os.path.dirname(folder), 'calib_imu_to_velo.txt'))
-        velo2cam = read_calib_file(os.path.join(self.data_path, os.path.dirname(folder), 'calib_velo_to_cam.txt'))
-        cam2cam = read_calib_file(os.path.join(self.data_path, os.path.dirname(folder), 'calib_cam_to_cam.txt'))
+    gt_depths = np.load(GT_PATH, allow_pickle=True)
 
-        velo2cam_mat = transform_from_rot_trans(velo2cam['R'], velo2cam['T'])
-        imu2velo_mat = transform_from_rot_trans(imu2velo['R'], imu2velo['T'])
-        cam_2rect_mat = transform_from_rot_trans(cam2cam['R_rect_00'], np.zeros(3))
+    print("-> Evaluating")
+    if cfg.data['stereo_scale']:
+        print('using baseline')
+    else:
+        print('using mean scaling')
 
-        imu2cam = cam_2rect_mat @ velo2cam_mat @ imu2velo_mat
+    errors = []
+    ratios = []
+    predictions = np.zeros((697, gt_depths[0].shape[0], gt_depths[0].shape[1]))
+    for i in range(pred_disps.shape[0]):
+        gt_depth = gt_depths[i]
+        gt_height, gt_width = gt_depth.shape[:2]
 
-        odo_pose = imu2cam[:3,:3] @ displacement + imu2cam[:3,3]
+        pred_disp = pred_disps[i]
+        pred_disp = cv2.resize(pred_disp, (gt_width, gt_height))
+        predictions[i] = pred_disp
 
-        return odo_pose
+        pred_depth = 1 / pred_disp
 
-class KITTIOdomDataset(KITTIDataset):
-    """KITTI dataset for odometry training and testing
-    """
-    def __init__(self, *args, **kwargs):
-        super(KITTIOdomDataset, self).__init__(*args, **kwargs)
+        mask = np.logical_and(gt_depth > MIN_DEPTH, gt_depth < MAX_DEPTH)
+        crop = np.array([0.40810811 * gt_height, 0.99189189 * gt_height,
+                         0.03594771 * gt_width,  0.96405229 * gt_width]).astype(np.int32)
+        crop_mask = np.zeros(mask.shape)
+        crop_mask[crop[0]:crop[1], crop[2]:crop[3]] = 1
+        mask = np.logical_and(mask, crop_mask)
 
-    def get_image_path(self, folder, frame_index, side):
-        f_str = "{:06d}{}".format(frame_index, self.img_ext)
-        side_map = {"l": 0, "r": 1}
-        image_path = os.path.join(
-            self.data_path,
-            "sequences/{:02d}".format(int(folder)),
-            "image_{}".format(side_map[side]),
-            f_str)
-        return image_path
+        pred_depth = pred_depth[mask]
+        gt_depth = gt_depth[mask]
+
+        ratio = np.median(gt_depth) / np.median(pred_depth)
+        ratios.append(ratio)
+
+        if cfg.data['stereo_scale']:
+            ratio = STEREO_SCALE_FACTOR
+
+        pred_depth *= ratio
+        pred_depth[pred_depth < MIN_DEPTH] = MIN_DEPTH
+        pred_depth[pred_depth > MAX_DEPTH] = MAX_DEPTH
+        errors.append(compute_errors(gt_depth, pred_depth))
+
+    ratios = np.array(ratios)
+    med = np.median(ratios)
+    errors = np.array(errors)
+    mean_errors = errors.mean(0)
+    print("Scaling ratios | med: {:0.3f} | std: {:0.3f}".format(med, np.std(ratios / med)))
+    print("\n" + ("{:>}| " * 7).format("abs_rel", "sq_rel", "rmse", "rmse_log", "a1", "a2", "a3"))
+    print(("&{:.3f} " * 7).format(*mean_errors.tolist()) + "\\\\")
+    
+    print("\n-> Saving results!")
+    output_dir = '/content/FeatDepth/results/'
+    if not os.path.exists(output_dir):
+        os.makedirs(output_dir)
+    np.save(output_dir + 'predictions.npy', predictions)
+    np.save(output_dir + 'errors.npy', errors)
+
+    # save 5% best images and 5% worst images
+    decisive_errors = errors[:, 0] # abs_rel
+
+    good_value = np.percentile(decisive_errors, 5)
+    bad_value = np.percentile(decisive_errors, 95)
+
+    best_indices = np.where(decisive_errors < good_value)[0]
+    worst_indices = np.where(decisive_errors > bad_value)[0]
+
+    best_predictions = predictions[best_indices]
+    worst_predictions = predictions[worst_indices]
+    np.save(output_dir + 'best_predictions.npy', best_predictions)
+    np.save(output_dir + 'worst_predictions.npy', worst_predictions)
 
 
-class KITTIDepthDataset(KITTIDataset):
-    """KITTI dataset which uses the updated ground truth depth maps
-    """
-    def __init__(self, *args, **kwargs):
-        super(KITTIDepthDataset, self).__init__(*args, **kwargs)
+    tgt_imgs = np.asarray(tgt_imgs)
+    tgt_imgs = tgt_imgs * 255.
+    tgt_imgs = np.asarray(tgt_imgs, dtype=np.int)
+    best_imgs = tgt_imgs[best_indices]
+    worst_imgs = tgt_imgs[worst_indices]
+    np.save(output_dir + 'best_imgs.npy', best_imgs)
+    np.save(output_dir + 'worst_imgs.npy', worst_imgs)
+    
+    print("\n-> Done!")
 
-    def get_image_path(self, folder, frame_index, side):
-        f_str = "{:010d}{}".format(frame_index, self.img_ext)
-        image_path = os.path.join(
-            self.data_path,
-            folder,
-            "image_0{}/data".format(self.side_map[side]),
-            f_str)
-        return image_path
-
-    def get_depth(self, folder, frame_index, side, do_flip):
-        f_str = "{:010d}.png".format(frame_index)
-        depth_path = os.path.join(
-            self.data_path,
-            folder,
-            "proj_depth/groundtruth/image_0{}".format(self.side_map[side]),
-            f_str)
-
-        depth_gt = pil.open(depth_path)
-        depth_gt = depth_gt.resize(self.full_res_shape, pil.NEAREST)
-        depth_gt = np.array(depth_gt).astype(np.float32) / 256
-
-        if do_flip:
-            depth_gt = np.fliplr(depth_gt)
-
-        return depth_gt
+if __name__ == "__main__":
+    CFG_PATH = '/content/FeatDepth/config/cfg_kitti_fm.py'#path to cfg file
+    GT_PATH = '/content/logs/gt.npy'#path to kitti gt depth
+    MODEL_PATH = '/content/logs/epoch_1.pth'#path to model weights
+    evaluate(MODEL_PATH, CFG_PATH, GT_PATH)
