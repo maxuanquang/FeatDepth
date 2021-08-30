@@ -47,10 +47,14 @@ def evaluate(MODEL_PATH, CFG_PATH, GT_PATH):
     model.eval()
 
     pred_disps = []
+    tgt_imgs = []
     with torch.no_grad():
         for batch_idx, inputs in enumerate(dataloader):
             for key, ipt in inputs.items():
                 inputs[key] = ipt.cuda()
+            tgt_img = inputs[('color', 0, 0)].cpu().detach().numpy()
+            tgt_img = np.transpose(tgt_img, (1, 2, 0))
+            tgt_imgs.append(inputs[('color', 0, 0)])
             outputs = model(inputs)
 
             disp = outputs[("disp", 0, 0)]
@@ -70,12 +74,14 @@ def evaluate(MODEL_PATH, CFG_PATH, GT_PATH):
 
     errors = []
     ratios = []
+    predictions = np.zeros((697, pred_disps[0].shape[0], pred_disps[0].shape[1]))
     for i in range(pred_disps.shape[0]):
         gt_depth = gt_depths[i]
         gt_height, gt_width = gt_depth.shape[:2]
 
         pred_disp = pred_disps[i]
         pred_disp = cv2.resize(pred_disp, (gt_width, gt_height))
+        predictions[i] = pred_disp
 
         pred_depth = 1 / pred_disp
 
@@ -106,8 +112,33 @@ def evaluate(MODEL_PATH, CFG_PATH, GT_PATH):
     print("Scaling ratios | med: {:0.3f} | std: {:0.3f}".format(med, np.std(ratios / med)))
     print("\n" + ("{:>}| " * 7).format("abs_rel", "sq_rel", "rmse", "rmse_log", "a1", "a2", "a3"))
     print(("&{:.3f} " * 7).format(*mean_errors.tolist()) + "\\\\")
-    print("\n-> Done!")
+    
+    print("\n-> Saving results!")
+    output_dir = '/content/FeatDepth/results/'
+    np.save(output_dir + 'predictions.npy', predictions)
+    np.save(output_dir + 'errors.npy', errors)
 
+    # save 5% best images and 5% worst images
+    decisive_errors = errors[:, 0] # abs_rel
+
+    good_value = np.percentile(decisive_errors, 5)
+    bad_value = np.percentile(decisive_errors, 95)
+
+    best_indices = np.where(decisive_errors < good_value)[0]
+    worst_indices = np.where(decisive_errors > bad_value)[0]
+
+    best_predictions = predictions[best_indices]
+    worst_predictions = predictions[worst_indices]
+    np.save(output_dir + 'best_predictions.npy', best_predictions)
+    np.save(output_dir + 'worst_predictions.npy', worst_predictions)
+
+    tgt_imgs = np.asarray(tgt_imgs, dtype=np.int)
+    best_imgs = tgt_imgs[best_indices]
+    worst_imgs = tgt_imgs[worst_indices]
+    np.save(output_dir + 'best_imgs.npy', best_imgs)
+    np.save(output_dir + 'worst_imgs.npy', worst_imgs)
+    
+    print("\n-> Done!")
 
 if __name__ == "__main__":
     CFG_PATH = '/content/FeatDepth/config/cfg_kitti_fm.py'#path to cfg file
