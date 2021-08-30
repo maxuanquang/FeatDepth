@@ -74,7 +74,7 @@ def evaluate(MODEL_PATH, CFG_PATH, GT_PATH):
 
     errors = []
     ratios = []
-    predictions = np.zeros((697, pred_disps[0].shape[0], pred_disps[0].shape[1]))
+    predictions = np.zeros((697, gt_depths[0].shape[0], gt_depths[0].shape[1]))
     for i in range(pred_disps.shape[0]):
         gt_depth = gt_depths[i]
         gt_height, gt_width = gt_depth.shape[:2]
