@@ -60,8 +60,10 @@ class mono_fm_joint(nn.Module):
 
         for i in range(5):
             f=features[i]
-            regularization_loss = self.get_feature_regularization_loss(f, target)
+            regularization_loss, discriminative_loss_not_weighted, convergent_loss_not_weighted = self.get_feature_regularization_loss(f, target)
             loss_dict[('feature_regularization_loss', i)] = regularization_loss/(2 ** i)/5
+            loss_dict[('discriminative_loss_not_weighted', i)] = discriminative_loss_not_weighted
+            loss_dict[('convergent_loss_not_weighted', i)] = convergent_loss_not_weighted
 
         for scale in self.opt.scales:
             """
@@ -80,6 +82,7 @@ class mono_fm_joint(nn.Module):
             target_resize = F.interpolate(target, [h, w], mode="bilinear", align_corners=False)
             img_reconstruct_loss = self.compute_reprojection_loss(res_img, target_resize)
             loss_dict[('img_reconstruct_loss', scale)] = img_reconstruct_loss.mean() / len(self.opt.scales)
+            loss_dict[('img_reconstruct_loss_not_weighted', scale)] = loss_dict[('img_reconstruct_loss', scale)]
 
             """
             reconstruction
@@ -106,7 +109,8 @@ class mono_fm_joint(nn.Module):
             reprojection_loss = torch.cat(reprojection_losses, 1)
 
             min_reconstruct_loss, outputs[("min_index", scale)] = torch.min(reprojection_loss, dim=1)
-            loss_dict[('min_reconstruct_loss', scale)] = min_reconstruct_loss.mean()/len(self.opt.scales)
+            loss_dict[('min_reconstruct_loss', scale)] = min_reconstruct_loss.mean() / len(self.opt.scales)
+            loss_dict[('min_reconstruct_loss_not_weighted', scale)] = loss_dict[('min_reconstruct_loss', scale)]
 
             """
             minimum perceptional loss
@@ -119,6 +123,7 @@ class mono_fm_joint(nn.Module):
 
             min_perceptional_loss, outputs[("min_index", scale)] = torch.min(perceptional_loss, dim=1)
             loss_dict[('min_perceptional_loss', scale)] = self.opt.perception_weight * min_perceptional_loss.mean() / len(self.opt.scales)
+            loss_dict[('min_perceptional_loss_not_weighted', scale)] = min_perceptional_loss.mean() / len(self.opt.scales)
 
             """
             disp mean normalization
@@ -131,7 +136,8 @@ class mono_fm_joint(nn.Module):
             smooth loss
             """
             smooth_loss = self.get_smooth_loss(disp, target)
-            loss_dict[('smooth_loss', scale)] = self.opt.smoothness_weight * smooth_loss / (2 ** scale)/len(self.opt.scales)
+            loss_dict[('smooth_loss', scale)] = self.opt.smoothness_weight * smooth_loss / (2 ** scale) / len(self.opt.scales)
+            loss_dict[('smooth_loss_not_weighted', scale)] = smooth_loss / (2 ** scale) / len(self.opt.scales)
 
         return loss_dict
 
@@ -306,4 +312,4 @@ class mono_fm_joint(nn.Module):
                   torch.mean(feature_dyx.abs() * torch.exp(-img_dyx.abs().mean(1, True))) + \
                   torch.mean(feature_dyy.abs() * torch.exp(-img_dyy.abs().mean(1, True)))
 
-        return -self.opt.dis * smooth1+ self.opt.cvt * smooth2
+        return -self.opt.dis * smooth1 + self.opt.cvt * smooth2, smooth1, smooth2

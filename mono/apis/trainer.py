@@ -15,6 +15,7 @@ from mono.core import (DistOptimizerHook, DistEvalMonoHook, NonDistEvalHook)
 from mono.core import (DistOptimizerHook)
 from mono.datasets import build_dataloader
 from .env import get_root_logger
+import csv
 
 
 def change_input_variable(data):
@@ -39,6 +40,17 @@ def batch_processor(model, data, train_mode):
                 '{} is not a tensor or list of tensors'.format(loss_name))
 
     loss = sum(_value for _key, _value in log_vars.items())
+
+    with open('/content/logs/summary', 'a') as csvfile:
+        writer = csv.writer(csvfile, delimiter='\t')
+        names = []
+        values = []
+        for loss_name, loss_value in losses.items():
+            names.append(loss_name)
+            values.append(loss_value)
+        writer = csv.writer(csvfile, delimiter='\t')
+        writer.writerow(names)
+        writer.writerow(values)
 
     log_vars['loss'] = loss
     # print(log_vars)
