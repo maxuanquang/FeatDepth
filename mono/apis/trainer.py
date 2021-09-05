@@ -31,7 +31,7 @@ def batch_processor(model, data, train_mode):
     log_vars = OrderedDict()
 
     for loss_name, loss_value in losses.items():
-        if "not_weighted" in loss_name[0]:
+        if "not_weighted" not in loss_name[0]:
             if isinstance(loss_value, torch.Tensor):
                 log_vars[loss_name] = loss_value.mean()
             elif isinstance(loss_value, list):
