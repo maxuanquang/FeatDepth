@@ -40,7 +40,7 @@ model = dict(
 )
 
 resume_from = None
-finetune = '/content/logs/kitti_fm_joint'
+finetune = '/content/logs/kitti_fm_joint.pth'
 total_epochs = 2
 imgs_per_gpu = IMGS_PER_GPU
 learning_rate = 0
