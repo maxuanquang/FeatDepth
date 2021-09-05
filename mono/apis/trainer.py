@@ -41,7 +41,7 @@ def batch_processor(model, data, train_mode):
 
     loss = sum(_value for _key, _value in log_vars.items())
 
-    with open('/content/logs/summary', 'a') as csvfile:
+    with open('/content/logs/summary.csv', 'a') as csvfile:
         writer = csv.writer(csvfile, delimiter='\t')
         names = []
         values = []
