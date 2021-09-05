@@ -43,13 +43,10 @@ def batch_processor(model, data, train_mode):
 
     with open('/content/logs/summary.csv', 'a') as csvfile:
         writer = csv.writer(csvfile, delimiter='\t')
-        names = []
         values = []
         for loss_name, loss_value in losses.items():
-            names.append(loss_name)
-            values.append(loss_value)
+            values.append(loss_value.item())
         writer = csv.writer(csvfile, delimiter='\t')
-        writer.writerow(names)
         writer.writerow(values)
 
     log_vars['loss'] = loss

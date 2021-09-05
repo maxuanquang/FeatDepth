@@ -11,6 +11,7 @@ from mono.apis import (train_mono,
                        set_random_seed)
 from mono.model.registry import MONO
 import torch
+import csv
 
 
 def parse_args():
@@ -89,6 +90,58 @@ def main():
         val_dataset = get_dataset(cfg.data, training=False)
     else:
         val_dataset = None
+
+    name_losses = [('feature_regularization_loss', 0),
+        ('discriminative_loss_not_weighted', 0),
+        ('convergent_loss_not_weighted', 0),
+        ('feature_regularization_loss', 1),
+        ('discriminative_loss_not_weighted', 1),
+        ('convergent_loss_not_weighted', 1),
+        ('feature_regularization_loss', 2),
+        ('discriminative_loss_not_weighted', 2),
+        ('convergent_loss_not_weighted', 2),
+        ('feature_regularization_loss', 3),
+        ('discriminative_loss_not_weighted', 3),
+        ('convergent_loss_not_weighted', 3),
+        ('feature_regularization_loss', 4),
+        ('discriminative_loss_not_weighted', 4),
+        ('convergent_loss_not_weighted', 4),
+        ('img_reconstruct_loss', 0),
+        ('img_reconstruct_loss_not_weighted', 0),
+        ('min_reconstruct_loss', 0),
+        ('min_reconstruct_loss_not_weighted', 0),
+        ('min_perceptional_loss', 0),
+        ('min_perceptional_loss_not_weighted', 0),
+        ('smooth_loss', 0),
+        ('smooth_loss_not_weighted', 0),
+        ('img_reconstruct_loss', 1),
+        ('img_reconstruct_loss_not_weighted', 1),
+        ('min_reconstruct_loss', 1),
+        ('min_reconstruct_loss_not_weighted', 1),
+        ('min_perceptional_loss', 1),
+        ('min_perceptional_loss_not_weighted', 1),
+        ('smooth_loss', 1),
+        ('smooth_loss_not_weighted', 1),
+        ('img_reconstruct_loss', 2),
+        ('img_reconstruct_loss_not_weighted', 2),
+        ('min_reconstruct_loss', 2),
+        ('min_reconstruct_loss_not_weighted', 2),
+        ('min_perceptional_loss', 2),
+        ('min_perceptional_loss_not_weighted', 2),
+        ('smooth_loss', 2),
+        ('smooth_loss_not_weighted', 2),
+        ('img_reconstruct_loss', 3),
+        ('img_reconstruct_loss_not_weighted', 3),
+        ('min_reconstruct_loss', 3),
+        ('min_reconstruct_loss_not_weighted', 3),
+        ('min_perceptional_loss', 3),
+        ('min_perceptional_loss_not_weighted', 3),
+        ('smooth_loss', 3),
+        ('smooth_loss_not_weighted', 3)]
+
+    with open('/content/logs/summary.csv', 'w') as csvfile:
+        writer = csv.writer(csvfile, delimiter='\t')
+        writer.writerow(name_losses)
 
     train_mono(model,
                train_dataset,
