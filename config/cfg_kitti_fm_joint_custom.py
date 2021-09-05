@@ -7,11 +7,11 @@ WIDTH = 640#1024
 
 data = dict(
     name = 'kitti',
-    split = 'exp_custom',
+    split = 'exp_custom', # train files are eigen test split
     height = HEIGHT,
     width = WIDTH,
     frame_ids = FRAME_IDS,
-    in_path = '/content/eigen_test_split',
+    in_path = '/content/drive/MyDrive/Dự án/KITTI Dataset/Raw Data',
     gt_depth_path = '/content/logs/gt.npy',
     png = True,
     stereo_scale = True if 's' in FRAME_IDS else False,
@@ -39,9 +39,9 @@ model = dict(
     smoothness_weight = 1e-3,
 )
 
-resume_from = '/content/logs/fm_depth.pth'
-finetune = None
-total_epochs = 40
+resume_from = None
+finetune = '/content/logs/kitti_fm_joint'
+total_epochs = 2
 imgs_per_gpu = IMGS_PER_GPU
 learning_rate = 0
 workers_per_gpu = 4
