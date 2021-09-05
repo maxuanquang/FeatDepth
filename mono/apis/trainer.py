@@ -50,7 +50,7 @@ def batch_processor(model, data, train_mode):
         writer.writerow(values)
 
     log_vars['loss'] = loss
-    # print(log_vars)
+    print(log_vars)
     new_log_vars=OrderedDict()
     for name in log_vars:
         new_log_vars[str(name)] = log_vars[name].item()
