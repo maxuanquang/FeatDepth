@@ -7,7 +7,7 @@ WIDTH = 640#1024
 
 data = dict(
     name = 'kitti',
-    split = 'exp_custom', # train files are eigen test split
+    split = 'exp_custom', # train files are 100 images in eigen test split
     height = HEIGHT,
     width = WIDTH,
     frame_ids = FRAME_IDS,
@@ -49,14 +49,15 @@ validate = True
 
 optimizer = dict(type='Adam', lr=learning_rate, weight_decay=0)
 optimizer_config = dict(grad_clip=dict(max_norm=35, norm_type=2))
-lr_config = dict(
-    policy='step',
-    warmup='linear',
-    warmup_iters=500,
-    warmup_ratio=1.0 / 3,
-    step=[20,30],
-    gamma=0.5,
-)
+# lr_config = dict(
+#     policy='step',
+#     warmup='linear',
+#     warmup_iters=500,
+#     warmup_ratio=1.0 / 3,
+#     step=[20,30],
+#     gamma=0.5,
+# )
+lr_config = None
 
 checkpoint_config = dict(interval=1)
 log_config = dict(interval=50,
