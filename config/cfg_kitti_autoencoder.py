@@ -2,8 +2,8 @@ DEPTH_LAYERS = 50
 POSE_LAYERS = 18
 FRAME_IDS = [0]
 IMGS_PER_GPU = 5
-HEIGHT = 256
-WIDTH = 800
+HEIGHT = 320#256
+WIDTH = 1024#800
 
 data = dict(
     name = 'kitti',
@@ -11,9 +11,9 @@ data = dict(
     height = HEIGHT,
     width = WIDTH,
     frame_ids = FRAME_IDS,
-    in_path = '/node01_data5/kitti_raw',
-    gt_depth_path = '/node01_data5/monodepth2-test/monodepth2/gt_depths.npz',
-    png = False,
+    in_path = '/content/drive/MyDrive/Dự án/KITTI Dataset/Raw Data',#path to raw data
+    gt_depth_path = '/content/logs/gt.npy',
+    png = True,
     stereo_scale = False,
 )
 
@@ -28,8 +28,8 @@ model = dict(
     scales = [0, 1, 2, 3],
     min_depth = 0.1,
     max_depth = 100.0,
-    depth_pretrained_path = '/node01/jobs/io/pretrained/checkpoints/resnet/resnet{}.pth'.format(DEPTH_LAYERS),
-    pose_pretrained_path =  '/node01/jobs/io/pretrained/checkpoints/resnet/resnet{}.pth'.format(POSE_LAYERS),
+    depth_pretrained_path = '/content/logs/resnet{}.pth'.format(DEPTH_LAYERS),
+    pose_pretrained_path =  '/content/logs/resnet{}.pth'.format(POSE_LAYERS),
     automask = True,
     disp_norm = True,
     use_min_construct = True,

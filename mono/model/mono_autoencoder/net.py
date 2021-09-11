@@ -49,7 +49,7 @@ class autoencoder(nn.Module):
         for i in range(5):
             f=features[i]
             smooth_loss = self.get_smooth_loss(f, target)
-            loss_dict[('smooth_loss', i)] = smooth_loss/ (2 ** i)/5
+            loss_dict[('smooth_loss', i)] = smooth_loss/ (2 ** i) / 5
 
         for scale in self.opt.scales:
             """
@@ -63,9 +63,9 @@ class autoencoder(nn.Module):
             loss_dict[('min_reconstruct_loss', scale)] = min_reconstruct_loss.mean()/len(self.opt.scales)
 
             if self.count % interval == 0:
-                img_path = os.path.join('/node01_data5/monodepth2-test/odo', 'auto_{:0>4d}_{}.png'.format(self.count // interval, scale))
+                img_path = os.path.join('/content/logs', 'auto_{:0>4d}_{}.png'.format(self.count // interval, scale))
                 plt.imsave(img_path, pred[0].transpose(0,1).transpose(1,2).data.cpu().numpy())
-                img_path = os.path.join('/node01_data5/monodepth2-test/odo', 'img_{:0>4d}_{}.png'.format(self.count // interval, scale))
+                img_path = os.path.join('/content/logs', 'img_{:0>4d}_{}.png'.format(self.count // interval, scale))
                 plt.imsave(img_path, target[0].transpose(0, 1).transpose(1, 2).data.cpu().numpy())
 
         self.count += 1
