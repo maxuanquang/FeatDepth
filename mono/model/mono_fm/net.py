@@ -64,31 +64,52 @@ class mono_fm(nn.Module):
 
     def compute_losses(self, inputs, outputs):
         loss_dict = {}
+        outputs_features_pred = self.generate_features_pred(inputs, outputs)
+
+        target = inputs[("color", 0, 0)]
+        reprojection_losses_temporary = []
+
+        if self.opt.automask:
+            for frame_id in self.opt.frame_ids[1:]:
+                pred = inputs[("color", frame_id, 0)]
+                identity_reprojection_loss = self.compute_reprojection_loss(pred, target)
+                identity_reprojection_loss += torch.randn(identity_reprojection_loss.shape).cuda() * 1e-5
+                reprojection_losses_temporary.append(identity_reprojection_loss)
+                
+        perceptional_losses = []        
+        for frame_id in self.opt.frame_ids[1:]:
+            src_f = outputs[("feature", frame_id, 0)]
+            tgt_f = self.extractor(inputs[("color", 0, 0)])[0]
+            perceptional_losses.append(self.compute_perceptional_loss(tgt_f, src_f))
+        perceptional_loss = torch.cat(perceptional_losses, 1)
+
+        min_perceptional_loss_temporary, min_index_temporary = torch.min(perceptional_loss, dim=1)
+
         for scale in self.opt.scales:
             """
             initialization
             """
             disp = outputs[("disp", 0, scale)]
-            target = inputs[("color", 0, 0)]
+            # target = inputs[("color", 0, 0)]
 
-            reprojection_losses = []
-            perceptional_losses = []
+            reprojection_losses = reprojection_losses_temporary
+            # perceptional_losses = []
 
             """
             reconstruction
             """
             outputs = self.generate_images_pred(inputs, outputs, scale)
-            outputs = self.generate_features_pred(inputs, outputs)
+            outputs.update(outputs_features_pred)
 
             """
             automask
             """
-            if self.opt.automask:
-                for frame_id in self.opt.frame_ids[1:]:
-                    pred = inputs[("color", frame_id, 0)]
-                    identity_reprojection_loss = self.compute_reprojection_loss(pred, target)
-                    identity_reprojection_loss += torch.randn(identity_reprojection_loss.shape).cuda() * 1e-5
-                    reprojection_losses.append(identity_reprojection_loss)
+            # if self.opt.automask:
+            #     for frame_id in self.opt.frame_ids[1:]:
+            #         pred = inputs[("color", frame_id, 0)]
+            #         identity_reprojection_loss = self.compute_reprojection_loss(pred, target)
+            #         identity_reprojection_loss += torch.randn(identity_reprojection_loss.shape).cuda() * 1e-5
+            #         reprojection_losses.append(identity_reprojection_loss)
 
             """
             minimum reconstruction loss
@@ -104,13 +125,13 @@ class mono_fm(nn.Module):
             """
             minimum perceptional loss
             """
-            for frame_id in self.opt.frame_ids[1:]:
-                src_f = outputs[("feature", frame_id, 0)]
-                tgt_f = self.extractor(inputs[("color", 0, 0)])[0]
-                perceptional_losses.append(self.compute_perceptional_loss(tgt_f, src_f))
-            perceptional_loss = torch.cat(perceptional_losses, 1)
+            # for frame_id in self.opt.frame_ids[1:]:
+            #     src_f = outputs[("feature", frame_id, 0)]
+            #     tgt_f = self.extractor(inputs[("color", 0, 0)])[0]
+            #     perceptional_losses.append(self.compute_perceptional_loss(tgt_f, src_f))
+            # perceptional_loss = torch.cat(perceptional_losses, 1)
 
-            min_perceptional_loss, outputs[("min_index", scale)] = torch.min(perceptional_loss, dim=1)
+            min_perceptional_loss, outputs[("min_index", scale)] = min_perceptional_loss_temporary, min_index_temporary
             loss_dict[('min_perceptional_loss', scale)] = self.opt.perception_weight * min_perceptional_loss.mean() / len(self.opt.scales)
 
             """
