@@ -31,6 +31,12 @@ class mono_fm(nn.Module):
         self.DepthEncoder = DepthEncoder(self.opt.depth_num_layers,
                                          self.opt.depth_pretrained_path)
         self.DepthDecoder = DepthDecoder(self.DepthEncoder.num_ch_enc)
+
+        for param in self.DepthEncoder.parameters():
+            param.requires_grad = False
+        for param in self.DepthDecoder.parameters():
+            param.requires_grad = False
+            
         self.PoseEncoder = PoseEncoder(self.opt.pose_num_layers,
                                        self.opt.pose_pretrained_path)
         self.PoseDecoder = PoseDecoder(self.PoseEncoder.num_ch_enc)
