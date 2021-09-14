@@ -1,7 +1,7 @@
 DEPTH_LAYERS = 50#resnet50
 POSE_LAYERS = 18#resnet18
-FRAME_IDS = [0, 's']#0 refers to current frame, -1 and 1 refer to temperally adjacent frames, 's' refers to stereo adjacent frame.
-IMGS_PER_GPU = 2 #the number of images fed to each GPU
+FRAME_IDS = [0, -1, 1]#0 refers to current frame, -1 and 1 refer to temperally adjacent frames, 's' refers to stereo adjacent frame.
+IMGS_PER_GPU = 8 #the number of images fed to each GPU
 HEIGHT = 320#input image height
 WIDTH = 1024#input image width
 
@@ -39,8 +39,8 @@ model = dict(
 
 # resume_from = '/node01_data5/monodepth2-test/model/ms/ms.pth'#directly start training from provide weights
 resume_from = None
-finetune = None
-total_epochs = 40
+finetune = '/content/drive/MyDrive/VinAI/Motion segmentation/FeatDepth/logs-step-2/epoch_3.pth'
+total_epochs = 1
 imgs_per_gpu = IMGS_PER_GPU
 learning_rate = 1e-4
 workers_per_gpu = 4
