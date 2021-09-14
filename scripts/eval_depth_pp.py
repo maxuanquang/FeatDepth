@@ -37,7 +37,8 @@ def evaluate(MODEL_PATH, CFG_PATH, GT_PATH):
                           cfg.data['width'],
                           [0],
                           is_train=False,
-                          gt_depth_path=None)
+                          gt_depth_path=None,
+                          img_ext='.png')
 
     dataloader = DataLoader(dataset,
                         2,
@@ -70,7 +71,7 @@ def evaluate(MODEL_PATH, CFG_PATH, GT_PATH):
             pred_disps.append(pred_disp)
     pred_disps = np.concatenate(pred_disps)
 
-    gt_depths = np.load(GT_PATH, allow_pickle=True, fix_imports=True, encoding='latin1')["data"]
+    gt_depths = np.load(GT_PATH, allow_pickle=True)
 
     print("-> Evaluating")
     if cfg.data['stereo_scale']:
