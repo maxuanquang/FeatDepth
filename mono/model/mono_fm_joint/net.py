@@ -63,6 +63,16 @@ class mono_fm_joint(nn.Module):
             regularization_loss = self.get_feature_regularization_loss(f, target)
             loss_dict[('feature_regularization_loss', i)] = regularization_loss/(2 ** i)/5
 
+        outputs = self.generate_features_pred(inputs, outputs)
+
+
+        perceptional_losses = []
+        for frame_id in self.opt.frame_ids[1:]:
+            src_f = outputs[("feature", frame_id, 0)]
+            tgt_f = self.Encoder(inputs[("color", 0, 0)])[0]
+            perceptional_losses.append(self.compute_perceptional_loss(tgt_f, src_f))
+        perceptional_loss = torch.cat(perceptional_losses, 1)
+
         for scale in self.opt.scales:
             """
             initialization
@@ -70,7 +80,6 @@ class mono_fm_joint(nn.Module):
             disp = outputs[("disp", 0, scale)]
 
             reprojection_losses = []
-            perceptional_losses = []
 
             """
             autoencoder
@@ -85,7 +94,7 @@ class mono_fm_joint(nn.Module):
             reconstruction
             """
             outputs = self.generate_images_pred(inputs, outputs, scale)
-            outputs = self.generate_features_pred(inputs, outputs)
+            # outputs = self.generate_features_pred(inputs, outputs)
 
             """
             automask
@@ -111,11 +120,11 @@ class mono_fm_joint(nn.Module):
             """
             minimum perceptional loss
             """
-            for frame_id in self.opt.frame_ids[1:]:
-                src_f = outputs[("feature", frame_id, 0)]
-                tgt_f = self.Encoder(inputs[("color", 0, 0)])[0]
-                perceptional_losses.append(self.compute_perceptional_loss(tgt_f, src_f))
-            perceptional_loss = torch.cat(perceptional_losses, 1)
+            # for frame_id in self.opt.frame_ids[1:]:
+            #     src_f = outputs[("feature", frame_id, 0)]
+            #     tgt_f = self.Encoder(inputs[("color", 0, 0)])[0]
+            #     perceptional_losses.append(self.compute_perceptional_loss(tgt_f, src_f))
+            # perceptional_loss = torch.cat(perceptional_losses, 1)
 
             min_perceptional_loss, outputs[("min_index", scale)] = torch.min(perceptional_loss, dim=1)
             loss_dict[('min_perceptional_loss', scale)] = self.opt.perception_weight * min_perceptional_loss.mean() / len(self.opt.scales)
